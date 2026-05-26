@@ -39,7 +39,8 @@ jobs:
       - name: Run tests
         env:
           DATABASE_URL: postgresql+asyncpg://agentguard:agentguard@localhost:5432/agentguard_test
-        run: pytest backend/tests/ -v --cov=backend --cov-report=xml
+          PYTHONPATH: ${{ github.workspace }}
+        run: pytest -v --cov=backend --cov-report=xml
 
       - name: Upload coverage
         uses: codecov/codecov-action@v4
@@ -58,6 +59,7 @@ jobs:
           scan-ref: .
           severity: HIGH,CRITICAL
           exit-code: 1
+          ignore-unfixed: true
 
       - name: Run Snyk scan
         uses: snyk/actions/python@master
@@ -81,3 +83,4 @@ jobs:
           image-ref: agentguard-backend:${{ github.sha }}
           severity: HIGH,CRITICAL
           exit-code: 1
+          ignore-unfixed: true

@@ -22,7 +22,7 @@ opentelemetry-sdk==1.29.0
 opentelemetry-instrumentation-fastapi==0.50b0
 opentelemetry-exporter-otlp==1.29.0
 httpx==0.28.1
-python-jose[cryptography]==3.3.0
+PyJWT==2.10.1
 passlib[bcrypt]==1.7.4
 python-multipart==0.0.20
 aiohttp==3.11.11
