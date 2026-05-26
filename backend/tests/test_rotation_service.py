@@ -21,6 +21,13 @@ def make_nhi(age_days: int, last_rotated_days: int | None = None) -> MagicMock:
     return nhi
 
 
+def mock_scalars(db: AsyncMock, items: list) -> None:
+    """Return a sync MagicMock from db.scalars so .all() is not a coroutine."""
+    result = MagicMock()
+    result.all.return_value = items
+    db.scalars.return_value = result
+
+
 @pytest.mark.asyncio
 async def test_rotation_check_flags_overdue():
     svc = RotationService()
@@ -28,7 +35,7 @@ async def test_rotation_check_flags_overdue():
     db.add = MagicMock()
 
     nhi = make_nhi(age_days=95)
-    db.scalars.return_value.all.return_value = [nhi]
+    mock_scalars(db, [nhi])
     db.scalar.return_value = None  # no existing alert
 
     with patch("backend.services.rotation_service.settings") as mock_settings:
@@ -47,7 +54,7 @@ async def test_rotation_check_compliant():
     db.add = MagicMock()
 
     nhi = make_nhi(age_days=30, last_rotated_days=5)
-    db.scalars.return_value.all.return_value = [nhi]
+    mock_scalars(db, [nhi])
 
     with patch("backend.services.rotation_service.settings") as mock_settings:
         mock_settings.credential_rotation_days = 90

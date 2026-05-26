@@ -24,6 +24,13 @@ def make_edge(source: int, target: int) -> MagicMock:
     return edge
 
 
+def mock_scalars(db: AsyncMock, sequences: list[list]):
+    """Set db.scalars to return a sync MagicMock whose .all() cycles through sequences."""
+    result = MagicMock()
+    result.all.side_effect = sequences
+    db.scalars.return_value = result
+
+
 @pytest.mark.asyncio
 async def test_blast_radius_single_hop():
     svc = BlastRadiusService()
@@ -34,12 +41,9 @@ async def test_blast_radius_single_hop():
     target = make_nhi(2, "prod-db-role", risk_level=RiskLevel.CRITICAL)
     edge = make_edge(1, 2)
 
-    # 3 db.get calls: origin → target (reachable) → origin again in _find_similar_exposure
+    # 3 db.get calls: origin → target (reachable loop) → origin (_find_similar_exposure)
     db.get.side_effect = [origin, target, origin]
-    db.scalars.return_value.all.side_effect = [
-        [edge],  # edges from node 1
-        [],      # edges from node 2
-    ]
+    mock_scalars(db, [[edge], []])  # edges from node 1, then node 2
 
     result = await svc.calculate(db, nhi_id=1, max_depth=6)
 
@@ -56,7 +60,7 @@ async def test_blast_radius_no_edges():
 
     origin = make_nhi(1, "isolated-key")
     db.get.return_value = origin
-    db.scalars.return_value.all.return_value = []
+    mock_scalars(db, [[]])  # no edges from node 1
 
     result = await svc.calculate(db, nhi_id=1)
 
