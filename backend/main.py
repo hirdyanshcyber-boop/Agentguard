@@ -1,3 +1,4 @@
+import asyncio
 import structlog
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
@@ -9,7 +10,8 @@ from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExport
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from .core.config import get_settings
 from .core.database import init_db
-from .api.routes import inventory, audit, alerts
+from .api.routes import inventory, audit, alerts, rotation
+from .agents.rotation_monitor import run_monitor_loop
 
 settings = get_settings()
 log = structlog.get_logger()
@@ -27,7 +29,9 @@ def setup_telemetry(app: FastAPI):
 async def lifespan(app: FastAPI):
     log.info("agentguard_startup", version=settings.app_version)
     await init_db()
+    monitor_task = asyncio.create_task(run_monitor_loop(interval_seconds=3600))
     yield
+    monitor_task.cancel()
     log.info("agentguard_shutdown")
 
 
@@ -51,6 +55,7 @@ setup_telemetry(app)
 app.include_router(inventory.router, prefix="/api/v1")
 app.include_router(audit.router, prefix="/api/v1")
 app.include_router(alerts.router, prefix="/api/v1")
+app.include_router(rotation.router, prefix="/api/v1")
 
 
 @app.get("/health")
