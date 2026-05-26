@@ -1,0 +1,5 @@
+# CVE-2026-34070: langchain-core legacy load_prompt path traversal
+# Fix requires langchain-core>=1.2.22 but langgraph==0.2.60 constrains to <0.4.0.
+# AgentGuard does not use load_prompt or any legacy LangChain serialization functions.
+# Suppress until langgraph releases a version compatible with langchain-core 1.x.
+CVE-2026-34070

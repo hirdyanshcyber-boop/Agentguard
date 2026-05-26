@@ -1,28 +1,26 @@
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 from ..services.blast_radius_service import BlastRadiusService
-from ..models.nhi import NHIIdentity, RiskLevel, CredentialType, CloudProvider
-from ..models.graph import IdentityRelationship, RelationshipType
+from ..models.nhi import RiskLevel
 
 
-def make_nhi(nhi_id: int, name: str, risk_level: str = RiskLevel.LOW) -> NHIIdentity:
-    nhi = NHIIdentity()
+def make_nhi(nhi_id: int, name: str, risk_level: str = RiskLevel.LOW) -> MagicMock:
+    nhi = MagicMock()
     nhi.id = nhi_id
     nhi.name = name
-    nhi.provider = CloudProvider.AWS
-    nhi.credential_type = CredentialType.IAM_ROLE
+    nhi.provider = "aws"
+    nhi.credential_type = "iam_role"
     nhi.risk_level = risk_level
     nhi.is_active = True
     nhi.access_pattern_embedding = None
     return nhi
 
 
-def make_edge(source: int, target: int) -> IdentityRelationship:
-    edge = IdentityRelationship()
+def make_edge(source: int, target: int) -> MagicMock:
+    edge = MagicMock()
     edge.source_id = source
     edge.target_id = target
-    edge.relationship_type = RelationshipType.CAN_ASSUME
-    edge.weight = 1.0
+    edge.relationship_type = "can_assume"
     return edge
 
 
@@ -30,13 +28,14 @@ def make_edge(source: int, target: int) -> IdentityRelationship:
 async def test_blast_radius_single_hop():
     svc = BlastRadiusService()
     db = AsyncMock()
+    db.add = MagicMock()
 
     origin = make_nhi(1, "compromised-role")
     target = make_nhi(2, "prod-db-role", risk_level=RiskLevel.CRITICAL)
     edge = make_edge(1, 2)
 
-    # db.get: return origin on first call, target on second
-    db.get.side_effect = [origin, target]
+    # 3 db.get calls: origin → target (reachable) → origin again in _find_similar_exposure
+    db.get.side_effect = [origin, target, origin]
     db.scalars.return_value.all.side_effect = [
         [edge],  # edges from node 1
         [],      # edges from node 2
@@ -53,6 +52,7 @@ async def test_blast_radius_single_hop():
 async def test_blast_radius_no_edges():
     svc = BlastRadiusService()
     db = AsyncMock()
+    db.add = MagicMock()
 
     origin = make_nhi(1, "isolated-key")
     db.get.return_value = origin

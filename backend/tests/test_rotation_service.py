@@ -2,17 +2,17 @@ import pytest
 from datetime import datetime, timezone, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 from ..services.rotation_service import RotationService
-from ..models.nhi import NHIIdentity, RiskLevel, CredentialType, CloudProvider
+from ..models.nhi import RiskLevel
 
 
-def make_nhi(age_days: int, last_rotated_days: int | None = None) -> NHIIdentity:
+def make_nhi(age_days: int, last_rotated_days: int | None = None) -> MagicMock:
     now = datetime.now(timezone.utc)
-    nhi = NHIIdentity()
+    nhi = MagicMock()
     nhi.id = 1
     nhi.name = "test-key"
     nhi.external_id = "aws:iam:key:AKIATEST"
-    nhi.credential_type = CredentialType.API_KEY
-    nhi.provider = CloudProvider.AWS
+    nhi.credential_type = "api_key"
+    nhi.provider = "aws"
     nhi.created_at = now - timedelta(days=age_days)
     nhi.last_rotated = (now - timedelta(days=last_rotated_days)) if last_rotated_days is not None else None
     nhi.is_active = True
@@ -25,7 +25,8 @@ def make_nhi(age_days: int, last_rotated_days: int | None = None) -> NHIIdentity
 async def test_rotation_check_flags_overdue():
     svc = RotationService()
     db = AsyncMock()
-    # NHI 95 days old, never rotated — overdue (policy=90)
+    db.add = MagicMock()
+
     nhi = make_nhi(age_days=95)
     db.scalars.return_value.all.return_value = [nhi]
     db.scalar.return_value = None  # no existing alert
@@ -43,7 +44,8 @@ async def test_rotation_check_flags_overdue():
 async def test_rotation_check_compliant():
     svc = RotationService()
     db = AsyncMock()
-    # NHI 30 days old — compliant
+    db.add = MagicMock()
+
     nhi = make_nhi(age_days=30, last_rotated_days=5)
     db.scalars.return_value.all.return_value = [nhi]
 
@@ -60,6 +62,8 @@ async def test_rotation_check_compliant():
 async def test_mark_rotated_clears_risk():
     svc = RotationService()
     db = AsyncMock()
+    db.add = MagicMock()
+
     nhi = make_nhi(age_days=100)
     nhi.risk_level = RiskLevel.HIGH
     db.get.return_value = nhi
