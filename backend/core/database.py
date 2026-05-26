@@ -22,6 +22,8 @@ async def get_db() -> AsyncSession:
 
 
 async def init_db():
+    # Import all models so Base.metadata is populated before create_all
+    from ..models import nhi, graph  # noqa: F401
     async with engine.begin() as conn:
         await conn.execute(__import__("sqlalchemy").text("CREATE EXTENSION IF NOT EXISTS vector"))
         await conn.run_sync(Base.metadata.create_all)

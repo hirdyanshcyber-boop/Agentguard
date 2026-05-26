@@ -36,13 +36,31 @@ class ScanResponse(BaseModel):
 
 
 @router.post("/scan/aws", response_model=ScanResponse)
-async def trigger_aws_scan(
-    background_tasks: BackgroundTasks,
-    db: AsyncSession = Depends(get_db),
-):
-    """Trigger AWS NHI scan. Returns immediately; scan runs in background."""
-    result = await svc.run_aws_scan(db)
-    return result
+async def trigger_aws_scan(db: AsyncSession = Depends(get_db)):
+    return await svc.run_aws_scan(db)
+
+
+@router.post("/scan/azure", response_model=ScanResponse)
+async def trigger_azure_scan(db: AsyncSession = Depends(get_db)):
+    return await svc.run_azure_scan(db)
+
+
+@router.post("/scan/gcp", response_model=ScanResponse)
+async def trigger_gcp_scan(db: AsyncSession = Depends(get_db)):
+    return await svc.run_gcp_scan(db)
+
+
+@router.post("/scan/all", response_model=list[ScanResponse])
+async def trigger_full_scan(db: AsyncSession = Depends(get_db)):
+    """Scan all configured cloud providers sequentially."""
+    results = []
+    for runner in [svc.run_aws_scan, svc.run_azure_scan, svc.run_gcp_scan]:
+        try:
+            results.append(await runner(db))
+        except Exception as e:
+            results.append({"provider": runner.__name__, "scanned": 0, "flagged": 0,
+                            "error": str(e), "timestamp": __import__("datetime").datetime.utcnow().isoformat()})
+    return results
 
 
 @router.get("/nhis", response_model=list[NHIResponse])

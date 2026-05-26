@@ -10,7 +10,7 @@ from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExport
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from .core.config import get_settings
 from .core.database import init_db
-from .api.routes import inventory, audit, alerts, rotation
+from .api.routes import inventory, audit, alerts, rotation, blast_radius
 from .agents.rotation_monitor import run_monitor_loop
 
 settings = get_settings()
@@ -56,6 +56,7 @@ app.include_router(inventory.router, prefix="/api/v1")
 app.include_router(audit.router, prefix="/api/v1")
 app.include_router(alerts.router, prefix="/api/v1")
 app.include_router(rotation.router, prefix="/api/v1")
+app.include_router(blast_radius.router, prefix="/api/v1")
 
 
 @app.get("/health")
