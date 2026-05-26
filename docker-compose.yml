@@ -27,11 +27,10 @@ services:
       ABUSEIPDB_API_KEY: ${ABUSEIPDB_API_KEY:-}
       VIRUSTOTAL_API_KEY: ${VIRUSTOTAL_API_KEY:-}
       OTLP_ENDPOINT: http://otel-collector:4317
+      PYTHONPATH: /app
     depends_on:
       db:
         condition: service_healthy
-    environment:
-      PYTHONPATH: /app
     volumes:
       - ./backend:/app/backend
     command: uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
